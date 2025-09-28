@@ -1,67 +1,91 @@
-
-
+// app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/authContext"
 
 export default function LoginPage() {
+  const { user, login, loading } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState("");
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Si ya hay usuario, redirige al perfil
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/profile");
+    }
+  }, [user, loading, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
 
-    // Aquí puedes reemplazar con fetch a tu API route real
-    if (username === "admin" && password === "1234") {
-      // Login exitoso
-      router.push("/upload"); // redirige a la página de subida
-    } else {
-      setError("Usuario o contraseña incorrectos");
+    try {
+      await login(email, password);
+      router.push("/perfil"); // Redirigir al perfil
+    } catch (err: any) {
+      setError(err.message || "Error iniciando sesión");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-lg">Cargando...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-100 p-6">
+    <div className="flex items-center justify-center h-screen bg-stone-100">
       <form
-        onSubmit={handleLogin}
-        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md flex flex-col gap-6"
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-lg shadow-md w-full max-w-md"
       >
-        <h1 className="text-3xl font-bold text-amber-700 text-center mb-4">
+        <h1 className="text-2xl font-bold mb-6 text-amber-700 text-center">
           Iniciar Sesión
         </h1>
 
-        {error && <p className="text-red-600 text-center">{error}</p>}
+        {error && (
+          <p className="mb-4 text-red-600 text-center font-semibold">{error}</p>
+        )}
 
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Usuario</label>
+        <label className="block mb-4">
+          <span className="text-stone-700 font-semibold">Correo electrónico</span>
           <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
-            placeholder="Tu usuario"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
           />
-        </div>
+        </label>
 
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Contraseña</label>
+        <label className="block mb-6">
+          <span className="text-stone-700 font-semibold">Contraseña</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
-            placeholder="Tu contraseña"
+            required
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
           />
-        </div>
+        </label>
 
         <button
           type="submit"
-          className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-3 rounded-full font-semibold transition"
+          disabled={submitting}
+          className="w-full bg-amber-700 hover:bg-amber-800 text-white font-semibold py-2 rounded-md transition"
         >
-          Entrar
+          {submitting ? "Iniciando..." : "Iniciar Sesión"}
         </button>
       </form>
     </div>

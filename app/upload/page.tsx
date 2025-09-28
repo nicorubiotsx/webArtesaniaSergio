@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -8,7 +10,7 @@ export default function UploadPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+/*   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !title || !description || !price) {
       alert("Por favor completa todos los campos.");
@@ -31,13 +33,53 @@ export default function UploadPage() {
     setTitle("");
     setDescription("");
     setPrice("");
-  };
+  }; */
+const handleUpload = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!file || !title || !description || !price) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  // Subir imagen a Supabase Storage
+  const fileName = `${Date.now()}-${file.name}`;
+  const { data: storageData, error: storageError } = await supabase.storage
+    .from("APPS")
+    .upload(fileName, file);
+
+  if (storageError) {
+    alert("Error al subir imagen: " + storageError.message);
+    return;
+  }
+
+  // Obtener la URL pública de la imagen
+  const uel = supabase.storage.from("APPS").getPublicUrl(fileName).data.publicUrl
+console.log(uel)
+  // Guardar producto en la DB
+  const { data, error } = await supabase
+    .from("products")
+    .insert([{ title, description, price, image_url: uel }]);
+
+  if (error) {
+    alert("Error guardando producto: " + error.message);
+  } else {
+    alert("Producto guardado con éxito!");
+    setFile(null);
+    setTitle("");
+    setDescription("");
+    setPrice("");
+  }
+};
+
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 p-6">
       <h1 className="text-4xl font-bold text-amber-700 mb-8">Agregar Nuevo Producto</h1>
       <form
-        onSubmit={handleSubmit}
+      onSubmit={handleUpload}
+      
+     
         className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md flex flex-col gap-6"
       >
         {/* Imagen */}
@@ -91,7 +133,7 @@ export default function UploadPage() {
         </div>
 
         {/* Botón */}
-        <button
+        <button 
           type="submit"
           className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-3 rounded-full font-semibold transition"
         >

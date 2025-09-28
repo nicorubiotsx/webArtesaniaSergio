@@ -1,10 +1,39 @@
-// app/page.tsx
 "use client";
 
 import Image from "next/image";
 import { FaMapMarkerAlt, FaFacebook, FaPhone } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabaseClient";
+
+type Producto = {
+  id: number;
+  title: string;
+  desc: string;
+  price: string;
+  image_url: string;
+  estado: string; // debe existir en la tabla
+};
 
 export default function Home() {
+  const [productos, setProductos] = useState<Producto[]>([]);
+
+  useEffect(() => {
+    const fetchProductos = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("status", "disponible"); // 👈 solo productos disponibles
+
+      if (error) {
+        console.error("Error cargando productos:", error.message);
+      } else {
+        setProductos(data as Producto[]);
+      }
+    };
+
+    fetchProductos();
+  }, []);
+
   return (
     <main className="bg-stone-100 text-stone-900">
       {/* Hero Section */}
@@ -61,42 +90,9 @@ export default function Home() {
           Más que objetos: piezas que reflejan tradición, oficio y carácter propio.
         </p>
 
-
-
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-          {[
-            {
-              title: "Mesa de Roble",
-              desc: "Mesa rústica trabajada en madera de roble y fierro forjado.",
-              price: "$150.000",
-              img: "/mesa.webp",
-            },
-            {
-              title: "Candelador",
-              desc: "Candelabro trabajado en madera de roble y fierro forjado.",
-              price: "$150.000",
-              img: "/candelabro.avif",
-            },
-            {
-              title: "Jarrón de Greda",
-              desc: "Jarrón artesanal trabajado en greda y madera.",
-              price: "$150.000",
-              img: "/jarron.webp",
-            },
-            {
-              title: "Lámpara de Fierro",
-              desc: "Diseño artesanal con fierro trabajado a mano.",
-              price: "$45.000",
-              img: "/lampara.webp",
-            },
-            {
-              title: "Banco de Jardín",
-              desc: "Banco en madera y fierro, ideal para exteriores.",
-              price: "$80.000",
-              img: "/banco.jpg",
-            },
-          ].map((p, i) => {
-            const whatsappNumber = "56939123751"; // tu número de WhatsApp sin +
+          {productos.map((p) => {
+            const whatsappNumber = "56939123751";
             const message = encodeURIComponent(
               `Hola! Quisiera consultar sobre el producto: ${p.title}`
             );
@@ -104,13 +100,13 @@ export default function Home() {
 
             return (
               <a
-                key={i}
+                key={p.id}
                 href={whatsappLink}
                 target="_blank"
                 className="block bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition border border-stone-300"
               >
                 <Image
-                  src={p.img}
+                  src={p.image_url}
                   alt={p.title}
                   width={400}
                   height={250}
@@ -122,7 +118,9 @@ export default function Home() {
                       {p.title}
                     </h3>
                     <p className="mt-2 text-stone-600">{p.desc}</p>
-                    <p className="mt-2 font-bold text-amber-800 text-lg">{p.price}</p>
+                    <p className="mt-2 font-bold text-amber-800 text-lg">
+                      {p.price}
+                    </p>
                   </div>
                   <p className="mt-1 inline-flex items-center justify-center gap-2 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold text-center transition">
                     Consultar en WhatsApp
@@ -144,7 +142,7 @@ export default function Home() {
         </p>
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-          {[
+          {[ 
             {
               name: "María López",
               comment: "La mesa de roble es increíble, superó mis expectativas. ¡Se nota el trabajo artesanal!",
@@ -176,9 +174,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      
-
 
       {/* Contacto */}
       <section className="py-16 px-6 md:px-12 bg-stone-800 text-stone-100 text-center">
