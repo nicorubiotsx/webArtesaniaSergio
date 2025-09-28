@@ -5,6 +5,7 @@ import { FaPlus, FaEdit } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/authContext";
 
 type Product = {
   id: number;
@@ -19,7 +20,7 @@ export default function Perfil() {
   const router = useRouter();
   const [available, setAvailable] = useState<Product[]>([]);
   const [unavailable, setUnavailable] = useState<Product[]>([]);
-
+    const {user} = useAuth()
   const fetchProducts = async () => {
     const { data, error } = await supabase.from("products").select("*");
     if (error) return console.error(error);
@@ -37,7 +38,7 @@ export default function Perfil() {
     const { error } = await supabase
       .from("products")
       .update({ status: newStatus })
-      .eq("id", id);
+      .eq("user_id", user?.id);
 
     if (error) return alert("Error cambiando estado: " + error.message);
     fetchProducts();

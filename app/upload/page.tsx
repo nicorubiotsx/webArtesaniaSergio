@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/authContext";
 
 
 export default function UploadPage() {
@@ -9,43 +10,24 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const { user } = useAuth();
 
-/*   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !title || !description || !price) {
-      alert("Por favor completa todos los campos.");
-      return;
-    }
 
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", price);
-   
-   
-    // Aquí se puede hacer fetch a una API route para almacenar los productos
-    // Ejemplo: await fetch('/api/upload', { method: 'POST', body: formData });
-
-    alert("Producto listo para subir (implementa la lógica real).");
-    // Reset del formulario
-    setFile(null);
-    setTitle("");
-    setDescription("");
-    setPrice("");
-  }; */
 const handleUpload = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!file || !title || !description || !price) {
     alert("Completa todos los campos");
     return;
   }
+  if (!user) {
+  alert("Debes iniciar sesión para añadir un producto.");
+  return;
+}
 
   // Subir imagen a Supabase Storage
-  const fileName = `${Date.now()}-${file.name}`;
   const { data: storageData, error: storageError } = await supabase.storage
     .from("APPS")
-    .upload(fileName, file);
+    .upload(`public/${Date.now()}-${file.name}`, file);
 
   if (storageError) {
     alert("Error al subir imagen: " + storageError.message);
@@ -53,12 +35,13 @@ const handleUpload = async (e: React.FormEvent) => {
   }
 
   // Obtener la URL pública de la imagen
-  const uel = supabase.storage.from("APPS").getPublicUrl(fileName).data.publicUrl
+  const uel = supabase.storage.from("APPS").getPublicUrl(file.name.).data.publicUrl
 console.log(uel)
+const disponible="disponible"
   // Guardar producto en la DB
   const { data, error } = await supabase
     .from("products")
-    .insert([{ title, description, price, image_url: uel }]);
+    .insert([{ title, description, price, image_url: uel,user_id:user.id,status:disponible }]);
 
   if (error) {
     alert("Error guardando producto: " + error.message);
