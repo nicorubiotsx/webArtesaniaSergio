@@ -1,87 +1,118 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { use } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { useSearchParams, useRouter } from "next/navigation";
 
 type Product = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   price: string;
+  status: boolean;
   image_url: string;
-  status: string;
 };
 
-export default function EditProduct() {
-  const searchParams = useSearchParams();
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const idParam = searchParams.get("id");
-  const productId = idParam ? Number(idParam) : null;
 
   const [product, setProduct] = useState<Product | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Traer el producto desde la DB
   useEffect(() => {
-    if (!productId) return;
-
     const fetchProduct = async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("id", 5)
+        .eq("id", id)
         .single();
 
       if (error) {
-        alert("Error al cargar producto: " + error.message);
-        return;
+        console.error("Error al obtener producto:", error.message);
+      } else {
+        setProduct(data);
       }
-
-      setProduct(data);
-      setTitle(data.title);
-      setDescription(data.description);
-      setPrice(data.price);
+      setLoading(false);
     };
 
     fetchProduct();
-  }, [productId]);
+  }, [id]);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!productId) return;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    if (!product) return;
+    const { name, value } = e.target;
+    setProduct({ ...product, [name]: value });
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!product) return;
+    setProduct({ ...product, status: e.target.checked });
+  };
+
+  const handleSave = async () => {
+    if (!product) return;
+    setSaving(true);
 
     const { error } = await supabase
       .from("products")
-      .update({ title, description, price })
-      .eq("id", productId);
+      .update({
+        title: product.title,
+        description: product.description,
+        price: product.price,
+        status: product.status,
+      })
+      .eq("id", product.id);
 
     if (error) {
-      alert("Error actualizando producto: " + error.message);
+      console.error("Error al guardar cambios:", error.message);
+      alert("Error al guardar cambios: " + error.message);
     } else {
-      alert("Producto actualizado con éxito!");
-      router.push("/perfil"); // volver al perfil
+      alert("Producto actualizado con éxito ✅");
+      router.back();
     }
+
+    setSaving(false);
   };
 
-  if (!product) return <p className="text-center mt-10">Cargando producto...</p>;
+  if (loading) return <p className="text-center mt-10">Cargando producto...</p>;
+  if (!product) return <p className="text-center mt-10">Producto no encontrado.</p>;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 p-6">
-      <h1 className="text-4xl font-bold text-amber-700 mb-8">Editar Producto</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4 py-10">
+      <h1 className="text-4xl font-bold text-amber-700 mb-8 text-center">
+        Editar Producto
+      </h1>
+
       <form
-        onSubmit={handleUpdate}
-        className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md flex flex-col gap-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="bg-white rounded-2xl shadow-md p-6 sm:p-8 w-full max-w-md flex flex-col gap-6"
       >
+        {/* Imagen (vista previa) */}
+        <div className="flex flex-col">
+          <label className="mb-2 font-semibold text-stone-700">Imagen actual</label>
+          <img
+            src={product.image_url}
+            alt={product.title}
+            className="w-full h-48 object-cover rounded"
+          />
+        </div>
+
         {/* Título */}
         <div className="flex flex-col">
           <label className="mb-2 font-semibold text-stone-700">Título</label>
           <input
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            name="title"
+            value={product.title}
+            onChange={handleChange}
             className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
@@ -90,8 +121,9 @@ export default function EditProduct() {
         <div className="flex flex-col">
           <label className="mb-2 font-semibold text-stone-700">Descripción</label>
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            name="description"
+            value={product.description}
+            onChange={handleChange}
             className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
             rows={3}
           ></textarea>
@@ -102,19 +134,40 @@ export default function EditProduct() {
           <label className="mb-2 font-semibold text-stone-700">Precio</label>
           <input
             type="text"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            name="price"
+            value={product.price}
+            onChange={handleChange}
             className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
 
-        {/* Botón */}
-        <button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition"
-        >
-          Guardar Cambios
-        </button>
+        {/* Disponible */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={product.status}
+            onChange={handleCheckboxChange}
+          />
+          <label className="text-stone-700 font-medium">Disponible</label>
+        </div>
+
+        {/* Botones */}
+        <div className="flex justify-between mt-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="bg-stone-300 hover:bg-stone-400 text-stone-800 px-6 py-2 rounded-full font-semibold transition"
+          >
+            Volver
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-full font-semibold transition disabled:opacity-50"
+          >
+            {saving ? "Guardando..." : "Guardar Cambios"}
+          </button>
+        </div>
       </form>
     </div>
   );

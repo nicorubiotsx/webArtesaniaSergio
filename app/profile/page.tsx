@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import { FaPlus, FaEdit } from "react-icons/fa";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { FaPlus, FaEdit, FaSignOutAlt, FaUser, FaTrash } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../context/authContext";
+import { motion, Variants } from "framer-motion";
 
 type Product = {
   id: number;
@@ -13,128 +13,231 @@ type Product = {
   description: string;
   price: string;
   image_url: string;
-  status: string;
+  status: boolean;
+  user_id: string;
 };
 
 export default function Perfil() {
   const router = useRouter();
+  const { user } = useAuth();
   const [available, setAvailable] = useState<Product[]>([]);
   const [unavailable, setUnavailable] = useState<Product[]>([]);
-    const {user} = useAuth()
+  const [reload, setReload] = useState(false);
+
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from("products").select("*");
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("user_id", user.id);
+
     if (error) return console.error(error);
 
-    setAvailable(data.filter((p) => p.status === "disponible"));
-    setUnavailable(data.filter((p) => p.status === "no disponible"));
+    setAvailable(data.filter((p) => p.status === true));
+    setUnavailable(data.filter((p) => p.status === false));
   };
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [user, reload]);
 
-  const toggleStatus = async (id: number, currentStatus: string) => {
-    const newStatus = currentStatus === "disponible" ? "no disponible" : "disponible";
+  const toggleStatus = async (id: number, currentStatus: boolean) => {
+    if (!user) return;
+    const newStatus = !currentStatus;
+
     const { error } = await supabase
       .from("products")
       .update({ status: newStatus })
-      .eq("user_id", user?.id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
-    if (error) return alert("Error cambiando estado: " + error.message);
-    fetchProducts();
+    if (error) {
+      alert("Error cambiando estado: " + error.message);
+    } else {
+      setReload((prev) => !prev);
+    }
   };
 
-  return (
-    <main className="bg-stone-100 min-h-screen p-6">
-      {/* Header con botón Añadir */}
-      <div className="flex justify-between items-center mb-10">
-        <h1 className="text-3xl font-bold text-amber-700">Gestión de Productos</h1>
+  const deleteProduct = async (id: number) => {
+    if (!user) return;
+    const confirmDelete = confirm("¿Estás seguro que quieres eliminar este producto?");
+    if (!confirmDelete) return;
+
+    const { error } = await supabase.from("products").delete().eq("id", id);
+
+    if (error) {
+      alert("Error eliminando producto: " + error.message);
+    } else {
+      alert("Producto eliminado correctamente");
+      setReload((prev) => !prev);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-2xl font-bold mb-6 text-amber-800 text-center">
+          Debes iniciar sesión para ver tu perfil.
+        </p>
         <button
+          type="button"
+          className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
+          onClick={() => router.push("/login")}
+        >
+          <FaEdit /> Iniciar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <main className="bg-stone-100 min-h-screen py-16 px-6 md:px-12">
+      {/* Usuario */}
+      <section className="bg-white rounded-2xl shadow-md border border-stone-300 p-6 mb-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-4">
+          <FaUser className="text-amber-800 text-3xl" />
+          <div>
+            <p className="text-lg font-semibold text-stone-800">Usuario: {user.email}</p>
+            <p className="text-sm text-stone-600">ID: {user.id}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-full shadow transition"
+        >
+          <FaSignOutAlt /> Cerrar Sesión
+        </button>
+      </section>
+
+      {/* Botón añadir */}
+      <div className="flex justify-end mb-8">
+        <button
+          type="button"
           onClick={() => router.push("/upload")}
-          className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white font-semibold px-4 py-2 rounded-lg shadow transition"
+          className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full shadow transition"
         >
           <FaPlus /> Añadir Producto
         </button>
       </div>
 
-      {/* Productos disponibles */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold text-amber-700 mb-6">Productos Disponibles</h2>
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {available.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 hover:shadow-xl transition flex flex-col"
-            >
-              <Image
-                src={p.image_url}
-                alt={p.title}
-                width={400}
-                height={250}
-                className="w-full h-56 object-cover"
-              />
-              <div className="p-6 flex flex-col justify-between flex-1">
-                <div>
-                  <h3 className="text-xl md:text-2xl font-semibold text-stone-900">
-                    {p.title}
-                  </h3>
-                  <p className="mt-2 text-stone-600">{p.description}</p>
-                  <p className="mt-2 font-bold text-amber-800 text-lg">{p.price}</p>
+      {/* Disponibles */}
+      <section className="mb-16">
+        <h2 className="text-3xl font-bold text-amber-800 mb-6 text-center md:text-left">
+          Productos Disponibles
+        </h2>
+        {available.length === 0 ? (
+          <p className="text-stone-600 text-center">No hay productos disponibles.</p>
+        ) : (
+          <motion.div
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.15 } },
+            }}
+          >
+            {available.map((product) => (
+              <motion.div
+                key={product.id}
+                className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 flex flex-col"
+                variants={cardVariants}
+                whileHover={{ scale: 1.05, transition: { type: "spring", stiffness: 300 } }}
+              >
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-stone-800">{product.title}</h3>
+                    <p className="mt-2 text-stone-600">{product.description}</p>
+                    <p className="mt-2 font-bold text-amber-700 text-lg">{product.price}</p>
+                  </div>
+                  <div className="mt-4 flex gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition"
+                      onClick={() => toggleStatus(product.id, product.status)}
+                    >
+                      Marcar no disponible
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
+                      onClick={() => router.push(`/modified/${product.id}`)}
+                    >
+                      <FaEdit /> Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
+                      onClick={() => deleteProduct(product.id)}
+                    >
+                      <FaTrash /> Eliminar
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => toggleStatus(p.id, p.status)}
-                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 rounded-lg transition"
-                  >
-                    Marcar no disponible
-                  </button>
-                  <button
-                    onClick={() => router.push(`/modified/${p.id}`)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
-                  >
-                    <FaEdit /> Editar
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </section>
 
-      {/* Productos no disponibles */}
+      {/* No disponibles */}
       <section>
-        <h2 className="text-2xl font-semibold text-amber-700 mb-6">Productos No Disponibles</h2>
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {unavailable.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 opacity-70 hover:opacity-100 transition flex flex-col"
-            >
-              <Image
-                src={p.image_url}
-                alt={p.title}
-                width={400}
-                height={250}
-                className="w-full h-56 object-cover"
-              />
-              <div className="p-6 flex flex-col justify-between flex-1">
-                <div>
-                  <h3 className="text-xl md:text-2xl font-semibold text-stone-900">
-                    {p.title}
-                  </h3>
-                  <p className="mt-2 text-stone-600">{p.description}</p>
-                  <p className="mt-2 font-bold text-amber-800 text-lg">{p.price}</p>
+        <h2 className="text-3xl font-bold text-amber-800 mb-6 text-center md:text-left">
+          Productos No Disponibles
+        </h2>
+        {unavailable.length === 0 ? (
+          <p className="text-stone-600 text-center">No hay productos no disponibles.</p>
+        ) : (
+          <motion.div
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.15 } },
+            }}
+          >
+            {unavailable.map((product) => (
+              <motion.div
+                key={product.id}
+                className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 flex flex-col opacity-75"
+                variants={cardVariants}
+                whileHover={{
+                  scale: 1.03,
+                  rotate: 1,
+                  transition: { type: "spring", stiffness: 200 },
+                }}
+              >
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-stone-800">{product.title}</h3>
+                    <p className="mt-2 text-stone-600">{product.description}</p>
+                    <p className="mt-2 font-bold text-amber-700 text-lg">{product.price}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-4 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition"
+                    onClick={() => toggleStatus(product.id, product.status)}
+                  >
+                    Marcar disponible
+                  </button>
                 </div>
-                <button
-                  onClick={() => toggleStatus(p.id, p.status)}
-                  className="mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition"
-                >
-                  Marcar disponible
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </section>
     </main>
   );
