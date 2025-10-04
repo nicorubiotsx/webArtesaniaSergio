@@ -18,7 +18,7 @@ type Product = {
   status: boolean;
   user_id: string;
   created_at: string;
-  category: "Madera" | "Metal" | "Madera+Metal" | "ceramica" | "vidrio" | "Otros";
+  category: "Madera" | "Metal" | "Madera+Metal" | "Cerámica" | "Vidrio" | "Otros";
 };
 
 export default function Perfil() {
@@ -35,17 +35,14 @@ export default function Perfil() {
 
   const fetchProducts = async () => {
     if (!user) return;
-
     const { data, error } = await supabase
       .from("products")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-
     if (error) return console.error(error);
-
-    setAvailable(data.filter((p) => p.status === true));
-    setUnavailable(data.filter((p) => p.status === false));
+    setAvailable(data.filter(p => p.status));
+    setUnavailable(data.filter(p => !p.status));
   };
 
   useEffect(() => {
@@ -55,33 +52,27 @@ export default function Perfil() {
   const toggleStatus = async (id: number, currentStatus: boolean) => {
     if (!user) return;
     const newStatus = !currentStatus;
-
     const { error } = await supabase
       .from("products")
       .update({ status: newStatus })
       .eq("id", id)
       .eq("user_id", user.id);
-
-    if (error) {
-      toast.error("Error cambiando estado: " + error.message);
-    } else {
+    if (error) toast.error("Error cambiando estado: " + error.message);
+    else {
       toast.success("Estado actualizado correctamente");
-      setReload((prev) => !prev);
+      setReload(prev => !prev);
     }
   };
 
   const deleteProduct = async (id: number) => {
     if (!user) return;
-    const confirmDelete = confirm("¿Estás seguro que quieres eliminar este producto?");
+    const confirmDelete = confirm("¿Seguro que quieres eliminar este producto?");
     if (!confirmDelete) return;
-
     const { error } = await supabase.from("products").delete().eq("id", id);
-
-    if (error) {
-      toast.error("Error eliminando producto: " + error.message);
-    } else {
+    if (error) toast.error("Error eliminando producto: " + error.message);
+    else {
       toast.success("Producto eliminado correctamente");
-      setReload((prev) => !prev);
+      setReload(prev => !prev);
     }
   };
 
@@ -92,16 +83,16 @@ export default function Perfil() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-2xl font-bold mb-6 text-amber-800 text-center">
-          Debes iniciar sesión para ver tu perfil.
+      <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4">
+        <p className="text-2xl font-bold mb-6 text-amber-700 text-center">
+          Debes iniciar sesión para acceder a tu perfil
         </p>
         <button
           type="button"
-          className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
+          className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-3 rounded-2xl font-semibold shadow-md transition"
           onClick={() => router.push("/login")}
         >
-          <FaEdit /> Iniciar sesión
+          Iniciar Sesión
         </button>
       </div>
     );
@@ -110,15 +101,13 @@ export default function Perfil() {
   const ProductImage = ({ images }: { images: string[] | null }) => {
     const [index, setIndex] = useState(0);
     const imgs = images ?? [];
-
     if (imgs.length === 0) {
       return (
-        <div className="w-full h-48 flex items-center justify-center bg-stone-200 text-stone-500">
+        <div className="w-full h-48 flex items-center justify-center bg-stone-200 text-stone-500 rounded-2xl">
           Sin imagen
         </div>
       );
     }
-
     if (imgs.length === 1) {
       return (
         <Image
@@ -130,10 +119,8 @@ export default function Perfil() {
         />
       );
     }
-
-    const prev = () => setIndex((i) => (i === 0 ? imgs.length - 1 : i - 1));
-    const next = () => setIndex((i) => (i === imgs.length - 1 ? 0 : i + 1));
-
+    const prev = () => setIndex(i => (i === 0 ? imgs.length - 1 : i - 1));
+    const next = () => setIndex(i => (i === imgs.length - 1 ? 0 : i + 1));
     return (
       <div className="relative w-full h-48 rounded-2xl overflow-hidden">
         <Image
@@ -162,9 +149,9 @@ export default function Perfil() {
   };
 
   return (
-    <main className="bg-stone-100 min-h-screen py-16 px-6 md:px-12">
-
-        <div className="fixed top-4 left-4 z-50">
+    <main className="bg-stone-100 min-h-screen py-16 px-6 md:px-12 font-sans">
+      {/* Botón Inicio */}
+      <div className="fixed top-4 left-4 z-50">
         <button
           onClick={() => router.push("/")}
           className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold shadow-md transition"
@@ -173,63 +160,58 @@ export default function Perfil() {
         </button>
       </div>
 
+      {/* Header Usuario */}
+      <section className="bg-white rounded-3xl shadow-xl border border-stone-200 p-8 mb-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-5">
+          <div className="p-3 rounded-full bg-amber-100">
+            <FaUser className="text-amber-700 text-3xl" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-stone-800">{user.email}</p>
+            <div className="flex flex-wrap gap-4 mt-2">
+              <span className="text-sm font-medium text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                Disponibles: {available.length}
+              </span>
+              <span className="text-sm font-medium text-rose-700 bg-rose-100 px-3 py-1 rounded-full">
+                No disponibles: {unavailable.length}
+              </span>
+            </div>
+          </div>
+        </div>
 
-      
-      {/* Header de usuario y estadísticas */}
-<section className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 md:p-8 mb-10 flex flex-col md:flex-row justify-between items-center gap-6 transition">
-  {/* Info de usuario */}
-  <div className="flex items-center gap-5">
-    <div className="p-3 rounded-full bg-amber-100">
-      <FaUser className="text-amber-700 text-3xl" />
-    </div>
-    <div>
-      <p className="text-xl font-bold text-stone-800">{user.email}</p>
-      <div className="flex flex-wrap gap-4 mt-2">
-        <span className="text-sm font-medium text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-          Disponibles: {available.length}
-        </span>
-        <span className="text-sm font-medium text-rose-700 bg-rose-100 px-3 py-1 rounded-full">
-          No disponibles: {unavailable.length}
-        </span>
-      </div>
-    </div>
-  </div>
+        {/* Acciones */}
+        <div className="flex gap-4 flex-wrap">
+          <button
+            type="button"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl shadow-md font-medium transition-transform transform hover:scale-105"
+            onClick={() => router.push("/dashboard")}
+          >
+            🗓 Dashboard
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl shadow-md font-medium transition-transform transform hover:scale-105"
+            onClick={() => router.push("/upload")}
+          >
+            <FaPlus /> Añadir Producto
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-stone-700 hover:bg-stone-800 text-white px-5 py-2.5 rounded-2xl shadow-md font-medium transition-transform transform hover:scale-105"
+          >
+            <FaSignOutAlt /> Cerrar Sesión
+          </button>
+        </div>
+      </section>
 
-  {/* Acciones */}
-  <div className="flex gap-4">
-    <button
-  type="button"
-  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-  onClick={() => router.push("/dashboard")}
->
-  🗓 Dashboard
-</button>
-
-    <button
-      type="button"
-      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-      onClick={() => router.push("/upload")}
-    >
-      <FaPlus /> Añadir Producto
-    </button>
-    <button
-      type="button"
-      onClick={handleLogout}
-      className="flex items-center gap-2 bg-stone-700 hover:bg-stone-800 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-    >
-      <FaSignOutAlt /> Cerrar Sesión
-    </button>
-  </div>
-</section>
-
-
-      {/* Productos disponibles */}
+      {/* Productos Disponibles */}
       <section className="mb-16">
-        <h2 className="text-3xl font-bold text-amber-800 mb-6 text-center md:text-left">
+        <h2 className="text-3xl font-bold text-amber-700 mb-6 text-center md:text-left">
           Productos Disponibles
         </h2>
         {available.length === 0 ? (
-          <p className="text-stone-600 text-center">No hay productos disponibles.</p>
+          <p className="text-stone-600 text-center">Aún no tienes productos disponibles.</p>
         ) : (
           <motion.div
             className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
@@ -240,7 +222,7 @@ export default function Perfil() {
               visible: { transition: { staggerChildren: 0.15 } },
             }}
           >
-            {available.map((product) => (
+            {available.map(product => (
               <motion.div
                 key={product.id}
                 className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 flex flex-col"
@@ -257,21 +239,18 @@ export default function Perfil() {
                   </div>
                   <div className="mt-4 flex gap-3 flex-wrap">
                     <button
-                      type="button"
                       className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition"
                       onClick={() => toggleStatus(product.id, product.status)}
                     >
                       Marcar no disponible
                     </button>
                     <button
-                      type="button"
                       className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
                       onClick={() => router.push(`/modified/${product.id}`)}
                     >
                       <FaEdit /> Editar
                     </button>
                     <button
-                      type="button"
                       className="bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
                       onClick={() => deleteProduct(product.id)}
                     >
@@ -285,49 +264,49 @@ export default function Perfil() {
         )}
       </section>
 
-      {/* Productos no disponibles */}
+      {/* Productos No Disponibles */}
       <section className="mb-16">
         <h2 className="text-2xl font-bold text-stone-600 mb-4 text-center md:text-left">
           Productos No Disponibles
         </h2>
         {unavailable.length === 0 ? (
-          <p className="text-stone-500 text-center">No hay productos no disponibles.</p>
+          <p className="text-stone-500 text-center">Todos tus productos están activos.</p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {unavailable.map((product) => (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {unavailable.map(product => (
               <div
                 key={product.id}
-                className="bg-stone-200 rounded-xl p-4 flex flex-col justify-between border border-stone-300"
+                className="bg-white rounded-2xl p-6 flex flex-col justify-between border border-stone-300 shadow-md"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   {product.image_urls && product.image_urls[0] ? (
                     <Image
                       src={product.image_urls[0]}
                       alt={product.title}
                       width={80}
                       height={80}
-                      className="rounded-lg object-cover"
+                      className="rounded-xl object-cover"
                     />
                   ) : (
-                    <div className="w-20 h-20 bg-stone-400 flex items-center justify-center text-white rounded-lg">
+                    <div className="w-20 h-20 bg-stone-400 flex items-center justify-center text-white rounded-xl">
                       Sin Imagen
                     </div>
                   )}
                   <div className="flex-1">
-                    <h4 className="font-semibold text-stone-700">{product.title}</h4>
-                    <p className="text-stone-500 text-sm">${product.price}</p>
+                    <h4 className="font-semibold text-stone-800">{product.title}</h4>
+                    <p className="text-stone-600 text-sm">${product.price}</p>
                     <p className="text-stone-500 text-xs">{product.category}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-4 flex gap-2 flex-wrap">
                   <button
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1 rounded-full text-sm font-semibold"
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition"
                     onClick={() => toggleStatus(product.id, product.status)}
                   >
                     Marcar disponible
                   </button>
                   <button
-                    className="bg-stone-700 hover:bg-stone-800 text-white px-3 py-1 rounded-full text-sm font-semibold"
+                    className="bg-stone-700 hover:bg-stone-800 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition"
                     onClick={() => deleteProduct(product.id)}
                   >
                     Eliminar

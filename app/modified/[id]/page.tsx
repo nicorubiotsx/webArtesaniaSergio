@@ -11,7 +11,7 @@ type Product = {
   description: string;
   price: string;
   status: boolean;
-  image_urls: string;
+  image_urls: string[];
 };
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
@@ -49,11 +49,6 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     setProduct({ ...product, [name]: value });
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!product) return;
-    setProduct({ ...product, status: e.target.checked });
-  };
-
   const handleSave = async () => {
     if (!product) return;
     setSaving(true);
@@ -69,22 +64,23 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       .eq("id", product.id);
 
     if (error) {
-      console.error("Error al guardar cambios:", error.message);
       alert("Error al guardar cambios: " + error.message);
     } else {
-      alert("Producto actualizado con éxito ✅");
+      alert("✅ Producto actualizado correctamente");
       router.back();
     }
 
     setSaving(false);
   };
 
-  if (loading) return <p className="text-center mt-10">Cargando producto...</p>;
-  if (!product) return <p className="text-center mt-10">Producto no encontrado.</p>;
+  if (loading)
+    return <p className="text-center mt-10 text-stone-700">Cargando producto...</p>;
+  if (!product)
+    return <p className="text-center mt-10 text-stone-700">Producto no encontrado.</p>;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4 py-10">
-      <h1 className="text-4xl font-bold text-amber-700 mb-8 text-center">
+      <h1 className="text-4xl md:text-5xl font-bold text-amber-700 mb-8 text-center">
         Editar Producto
       </h1>
 
@@ -93,7 +89,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           e.preventDefault();
           handleSave();
         }}
-        className="bg-white rounded-2xl shadow-md p-6 sm:p-8 w-full max-w-md flex flex-col gap-6"
+        className="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 sm:p-8 w-full max-w-lg flex flex-col gap-6"
       >
         {/* Imagen (vista previa) */}
         <div className="flex flex-col">
@@ -101,7 +97,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           <img
             src={product.image_urls[0]}
             alt={product.title}
-            className="w-full h-48 object-cover rounded"
+            className="w-full h-56 object-cover rounded-2xl shadow-md"
           />
         </div>
 
@@ -113,7 +109,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             name="title"
             value={product.title}
             onChange={handleChange}
-            className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-stone-300 rounded-2xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
 
@@ -124,8 +120,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             name="description"
             value={product.description}
             onChange={handleChange}
-            className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-            rows={3}
+            className="border border-stone-300 rounded-2xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+            rows={4}
           ></textarea>
         </div>
 
@@ -137,18 +133,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             name="price"
             value={product.price}
             onChange={handleChange}
-            className="border border-stone-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-stone-300 rounded-2xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-        </div>
-
-        {/* Disponible */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={product.status}
-            onChange={handleCheckboxChange}
-          />
-          <label className="text-stone-700 font-medium">Disponible</label>
         </div>
 
         {/* Botones */}
@@ -156,14 +142,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="bg-stone-300 hover:bg-stone-400 text-stone-800 px-6 py-2 rounded-full font-semibold transition"
+            className="bg-stone-300 hover:bg-stone-400 text-stone-800 px-6 py-2 rounded-full font-semibold transition shadow-sm"
           >
             Volver
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-full font-semibold transition disabled:opacity-50"
+            className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-full font-semibold transition shadow-sm disabled:opacity-50"
           >
             {saving ? "Guardando..." : "Guardar Cambios"}
           </button>

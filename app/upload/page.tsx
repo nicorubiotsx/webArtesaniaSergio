@@ -1,3 +1,4 @@
+// page.tsx (UploadProduct)
 "use client";
 
 import React, { useState } from "react";
@@ -20,43 +21,29 @@ export default function UploadProduct() {
 
   const router = useRouter();
 
-  const removeBgAndUpload = async (
+  // ------------------ FUNCIONES ------------------
+
+  const uploadToSupabase = async (
     file: File,
     userId: string
   ): Promise<string | null> => {
     try {
-      const reader = new FileReader();
-      const base64: string = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const response = await fetch("/api/removebg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
-      });
-
-      if (!response.ok) throw new Error(await response.text());
-
-      const blob = await response.blob();
       const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
 
       const { error: storageError } = await supabase.storage
         .from("APPS")
-        .upload(`private/${userId}/${fileName}`, blob, { contentType: "image/png" });
+        .upload(`products/${userId}/${fileName}`, file, { contentType: file.type });
 
       if (storageError) throw storageError;
 
       const { data: publicUrlData } = supabase.storage
         .from("APPS")
-        .getPublicUrl(`private/${userId}/${fileName}`);
+        .getPublicUrl(`products/${userId}/${fileName}`);
 
       return publicUrlData.publicUrl;
     } catch (err: any) {
       console.error(err);
-      toast.error("Error procesando imagen: " + err.message);
+      toast.error("Error al subir imagen: " + err.message);
       return null;
     }
   };
@@ -69,8 +56,9 @@ export default function UploadProduct() {
     setLoading(true);
     try {
       const uploadedUrls: string[] = [];
+
       for (const file of files) {
-        const url = await removeBgAndUpload(file, user.id);
+        const url = await uploadToSupabase(file, user.id);
         if (url) uploadedUrls.push(url);
       }
 
@@ -88,7 +76,7 @@ export default function UploadProduct() {
 
       if (error) toast.error("Error guardando producto: " + error.message);
       else {
-        toast.success("Producto guardado!");
+        toast.success("Producto guardado correctamente 🎉");
         setFiles([]);
         setTitle("");
         setDescription("");
@@ -110,7 +98,7 @@ export default function UploadProduct() {
         </p>
         <button
           onClick={() => router.push("/login")}
-          className="bg-amber-700 text-white px-6 py-3 rounded-2xl shadow-md hover:bg-amber-800 transition"
+          className="bg-amber-700 hover:bg-amber-800 text-white font-semibold px-6 py-3 rounded-2xl shadow-md transition"
         >
           Iniciar Sesión
         </button>
@@ -118,63 +106,42 @@ export default function UploadProduct() {
     );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-stone-100 px-4 py-10">
+    <main className="min-h-screen flex flex-col items-center justify-start bg-stone-100 px-6 py-16">
       <Toaster position="top-right" />
-      <h1 className="text-4xl font-bold text-amber-700 mb-8 text-center">
+      <h1 className="text-4xl font-bold text-amber-700 mb-10 text-center">
         Agregar Nuevo Producto
       </h1>
 
       <motion.form
         onSubmit={handleUpload}
-        className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-3xl flex flex-col gap-6"
+        className="bg-white border border-stone-200 p-8 rounded-3xl shadow-lg w-full max-w-3xl flex flex-col gap-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
         {/* Imágenes */}
         <div className="flex flex-col gap-2">
           <label className="font-semibold text-stone-700">Imágenes</label>
-
-          <div className="flex gap-4 flex-wrap">
-            {/* Botón para cámara */}
-            <label className="bg-amber-700 text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-amber-800 transition">
-              Tomar Foto
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
-                className="hidden"
-              />
-            </label>
-
-            {/* Botón para examinar */}
-            <label className="bg-stone-700 text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-stone-800 transition">
-              Examinar Fotos
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {/* Previsualización */}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
+            className="border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+          />
           {files.length > 0 && (
             <div className="flex gap-2 flex-wrap mt-2">
               {files.map((f, i) => (
                 <motion.div
                   key={i}
                   className="bg-stone-200 text-stone-700 px-3 py-1 rounded-full text-sm flex items-center gap-2 shadow-sm"
-                  whileHover={{ scale: 1.05, backgroundColor: "#fbbf24" }}
+                  whileHover={{ scale: 1.05 }}
                 >
                   {f.name}
                   <button
                     type="button"
                     onClick={() => setFiles(files.filter((_, index) => index !== i))}
-                    className="text-red-500 font-bold hover:text-red-700 transition"
+                    className="text-rose-600 font-bold hover:text-rose-800 transition"
                   >
                     ×
                   </button>
@@ -191,7 +158,7 @@ export default function UploadProduct() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+            className="border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
             placeholder="Nombre del producto"
             required
           />
@@ -203,7 +170,7 @@ export default function UploadProduct() {
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none hover:border-amber-400 transition"
+            className="border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none hover:border-amber-400 transition"
             rows={4}
             placeholder="Descripción del producto"
             required
@@ -216,7 +183,7 @@ export default function UploadProduct() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as any)}
-            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+            className="border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
           >
             <option value="Madera">Madera</option>
             <option value="Metal">Metal</option>
@@ -234,14 +201,14 @@ export default function UploadProduct() {
             type="text"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+            className="border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
             placeholder="Precio en CLP"
             required
           />
         </div>
 
         {/* Botones */}
-        <div className="flex flex-col md:flex-row gap-4 mt-4">
+        <div className="flex flex-col md:flex-row gap-4 mt-6">
           <motion.button
             type="submit"
             disabled={loading}
@@ -249,7 +216,7 @@ export default function UploadProduct() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {loading ? "Procesando..." : "Subir Producto"}
+            {loading ? "Subiendo..." : "Subir Producto"}
           </motion.button>
 
           <button
@@ -261,6 +228,6 @@ export default function UploadProduct() {
           </button>
         </div>
       </motion.form>
-    </div>
+    </main>
   );
 }
