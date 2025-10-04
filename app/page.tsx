@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Producto = {
   id: number;
@@ -14,17 +15,23 @@ type Producto = {
   price: string;
   image_urls: string[] | null;
   status: boolean;
-  category: "Madera" | "Metal" | "Madera+Metal" | "ceramica" | "vidrio" | "Otros";
+  category:
+    | "Madera"
+    | "Metal"
+    | "Madera+Metal"
+    | "Cerámica"
+    | "Vidrio"
+    | "Otros";
 };
 
-// ✅ Función para formatear precios con puntos de miles
+// Función para formatear precios en CLP
 const formatPrice = (price: string | number) => {
   const number = typeof price === "string" ? parseInt(price, 10) : price;
   if (isNaN(number)) return price.toString();
   return new Intl.NumberFormat("es-CL").format(number);
 };
 
-// Componente para mostrar la imagen
+// Componente para mostrar imagen del producto
 const ProductImage = ({
   images,
   showArrows = true,
@@ -51,6 +58,7 @@ const ProductImage = ({
         width={400}
         height={250}
         className="w-full h-56 object-cover rounded-2xl"
+        loading="lazy"
       />
     );
   }
@@ -66,11 +74,13 @@ const ProductImage = ({
         width={400}
         height={250}
         className="w-full h-56 object-cover transition-transform duration-300 hover:scale-105"
+        loading="lazy"
       />
       <button
         type="button"
         onClick={prev}
         className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+        aria-label="Imagen anterior"
       >
         ‹
       </button>
@@ -78,6 +88,7 @@ const ProductImage = ({
         type="button"
         onClick={next}
         className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+        aria-label="Imagen siguiente"
       >
         ›
       </button>
@@ -90,14 +101,14 @@ export default function Home() {
   const [filter, setFilter] = useState<string>("Todos");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
-  // ✅ Verificar si el usuario está autenticado
+  // Verificar sesión del usuario
   useEffect(() => {
-    const sessionUser = supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
     });
 
-    // Escuchar cambios de sesión
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -107,7 +118,7 @@ export default function Home() {
     };
   }, []);
 
-  // ✅ Cargar productos
+  // Cargar productos
   useEffect(() => {
     const fetchProductos = async () => {
       const { data, error } = await supabase
@@ -115,39 +126,45 @@ export default function Home() {
         .select("*")
         .eq("status", true);
 
-      if (error) {
-        console.error("Error cargando productos:", error.message);
-      } else {
-        setProductos(data as Producto[]);
-      }
+      if (error) console.error("Error cargando productos:", error.message);
+      else setProductos(data as Producto[]);
     };
-
     fetchProductos();
   }, []);
 
+  // Filtrado
   const filteredProducts = productos.filter((p) => {
     const matchesCategory = filter === "Todos" || p.category === filter;
     const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const availableCategories = Array.from(new Set(productos.map((p) => p.category))).sort();
+  const availableCategories = Array.from(
+    new Set(productos.map((p) => p.category))
+  ).sort();
 
   return (
     <main className="bg-stone-100 text-stone-900">
-      {/* Botón de perfil fijo solo si está autenticado */}
-      {user && (
-        <div className="fixed top-4 right-4 z-50">
+      {/* Botón Perfil/Admin */}
+      <div className="fixed top-4 right-4 z-50">
+        {user ? (
           <Link
             href="/profile"
             className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold shadow-md transition"
           >
             <FaUser /> Perfil
           </Link>
-        </div>
-      )}
+        ) : (
+          <button
+            onClick={() => router.push("/login")}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-full font-semibold shadow-md transition"
+          >
+            <FaUser /> Admin / Login
+          </button>
+        )}
+      </div>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section
         className="relative h-[80vh] md:h-screen flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: "url('/fondo2.png')" }}
@@ -172,9 +189,7 @@ export default function Home() {
             </h2>
             <p className="text-lg md:text-xl leading-relaxed text-stone-700">
               Trabajo con{" "}
-              <span className="font-semibold text-amber-800">
-                fierros, madera de roble
-              </span>{" "}
+              <span className="font-semibold text-amber-800">fierros, madera de roble</span>{" "}
               y distintos materiales nobles, dando vida a piezas artesanales que
               combinan tradición, resistencia y belleza. Cada obra está hecha a
               mano, con dedicación y detalle, pensada para perdurar en el tiempo.
@@ -187,6 +202,7 @@ export default function Home() {
               width={500}
               height={400}
               className="rounded-xl shadow-lg object-cover"
+              loading="lazy"
             />
           </div>
         </div>
@@ -210,10 +226,11 @@ export default function Home() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilter("Todos")}
-              className={`px-5 py-2 rounded-full font-medium transition ${filter === "Todos"
-                ? "bg-amber-700 text-white shadow"
-                : "bg-white text-amber-700 border border-amber-700 hover:bg-amber-100"
-                }`}
+              className={`px-5 py-2 rounded-full font-medium transition ${
+                filter === "Todos"
+                  ? "bg-amber-700 text-white shadow"
+                  : "bg-white text-amber-700 border border-amber-700 hover:bg-amber-100"
+              }`}
             >
               Todos
             </button>
@@ -222,16 +239,17 @@ export default function Home() {
               <button
                 key={cat}
                 onClick={() => setFilter(cat)}
-                className={`px-5 py-2 rounded-full font-medium transition ${filter === cat
-                  ? "bg-amber-700 text-white shadow"
-                  : "bg-white text-amber-700 border border-amber-700 hover:bg-amber-100"
-                  }`}
+                className={`px-5 py-2 rounded-full font-medium transition ${
+                  filter === cat
+                    ? "bg-amber-700 text-white shadow"
+                    : "bg-white text-amber-700 border border-amber-700 hover:bg-amber-100"
+                }`}
               >
                 {cat === "Madera+Metal"
                   ? "Madera + Metal"
-                  : cat === "ceramica"
-                    ? "Cerámica"
-                    : cat}
+                  : cat === "Cerámica"
+                  ? "Cerámica"
+                  : cat}
               </button>
             ))}
           </div>
@@ -246,16 +264,14 @@ export default function Home() {
               className="relative block bg-white rounded-2xl shadow-lg overflow-hidden border border-stone-200 hover:shadow-xl hover:scale-105 transition-transform"
             >
               <div
-                className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold text-white ${p.status ? "bg-emerald-600" : "bg-gray-500"
-                  }`}
+                className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold text-white ${
+                  p.status ? "bg-emerald-600" : "bg-gray-500"
+                }`}
               >
                 {p.status ? "Disponible" : "No disponible"}
               </div>
 
-              <ProductImage
-                images={p.image_urls ? [p.image_urls[0]] : null}
-                showArrows={false}
-              />
+              <ProductImage images={p.image_urls ?? null} showArrows={false} />
 
               <div className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm opacity-0 hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center text-white p-6 text-center rounded-2xl">
                 <p className="drop-shadow">{p.description}</p>
@@ -324,6 +340,7 @@ export default function Home() {
                 src={t.img}
                 alt={t.name}
                 className="w-20 h-20 rounded-full object-cover mb-4 border-2 border-amber-700"
+                loading="lazy"
               />
               <p className="text-stone-700 mb-4">"{t.comment}"</p>
               <p className="font-semibold text-amber-700">{t.name}</p>
@@ -337,12 +354,28 @@ export default function Home() {
         <h2 className="text-4xl font-bold mb-10 text-amber-400">Contacto</h2>
         <div className="flex flex-col items-center gap-6">
           <p className="flex items-center gap-3 text-lg md:text-xl">
-            <FaPhone /> <a href="tel:+56939123751" className="text-amber-400 font-semibold hover:underline"> +56939123751 </a>
+            <FaPhone />{" "}
+            <a
+              href="tel:+56939123751"
+              className="text-amber-400 font-semibold hover:underline"
+            >
+              +56939123751
+            </a>
           </p>
-          <a href="https://facebook.com" target="_blank" className="flex items-center gap-3 text-lg md:text-xl hover:text-amber-400">
+          <a
+            href="https://facebook.com"
+            target="_blank"
+            className="flex items-center gap-3 text-lg md:text-xl hover:text-amber-400"
+            rel="noopener noreferrer"
+          >
             <FaFacebook /> Sergio Silva Artesanía
           </a>
-          <a href="https://www.google.com/maps?q=-33.4489,-70.6693" target="_blank" className="mt-6 flex items-center gap-3 bg-amber-600 hover:bg-amber-700 px-8 py-3 rounded-full text-lg md:text-xl font-semibold transition">
+          <a
+            href="https://www.google.com/maps?q=-33.4489,-70.6693"
+            target="_blank"
+            className="mt-6 flex items-center gap-3 bg-amber-600 hover:bg-amber-700 px-8 py-3 rounded-full text-lg md:text-xl font-semibold transition"
+            rel="noopener noreferrer"
+          >
             <FaMapMarkerAlt /> Ver Ubicación
           </a>
         </div>

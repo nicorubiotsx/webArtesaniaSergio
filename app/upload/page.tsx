@@ -4,46 +4,48 @@ import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { useRouter } from "next/navigation";
-import { FaEdit } from "react-icons/fa";
+import { motion } from "framer-motion";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function UploadProduct() {
   const { user } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<"Madera" | "Metal" | "Mixto" | "Cerámica" | "Vidrio" | "Otros">("Madera");
+  const [category, setCategory] = useState<
+    "Madera" | "Metal" | "Mixto" | "Cerámica" | "Vidrio" | "Otros"
+  >("Madera");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
-  const removeBgAndUpload = async (file: File, userId: string): Promise<string | null> => {
+  const removeBgAndUpload = async (
+    file: File,
+    userId: string
+  ): Promise<string | null> => {
     try {
-      const formData = new FormData();
-      formData.append("image_file", file);
-      formData.append("bg_color", "ffffff");
-      formData.append("size", "auto");
-
-      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-        method: "POST",
-        headers: {
-          "X-Api-Key": process.env.NEXT_PUBLIC_REMOVEBG_API_KEY || "",
-        },
-        body: formData,
+      const reader = new FileReader();
+      const base64: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error("RemoveBG error: " + errText);
-      }
+      const response = await fetch("/api/removebg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
 
       const blob = await response.blob();
       const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+
       const { error: storageError } = await supabase.storage
         .from("APPS")
-        .upload(`private/${userId}/${fileName}`, blob, {
-          contentType: "image/png",
-        });
+        .upload(`private/${userId}/${fileName}`, blob, { contentType: "image/png" });
 
       if (storageError) throw storageError;
 
@@ -52,17 +54,17 @@ export default function UploadProduct() {
         .getPublicUrl(`private/${userId}/${fileName}`);
 
       return publicUrlData.publicUrl;
-    } catch (error: any) {
-      console.error(error);
-      alert("Error procesando imagen: " + error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Error procesando imagen: " + err.message);
       return null;
     }
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return alert("Debes iniciar sesión para subir productos");
-    if (files.length === 0) return alert("Debes seleccionar al menos una imagen");
+    if (!user) return toast.error("Debes iniciar sesión");
+    if (files.length === 0) return toast.error("Selecciona al menos una imagen");
 
     setLoading(true);
     try {
@@ -84,10 +86,10 @@ export default function UploadProduct() {
         },
       ]);
 
-      if (error) {
-        alert("Error guardando producto: " + error.message);
-      } else {
-        alert("Producto guardado con éxito!");
+      if (error) toast.error("Error guardando producto: " + error.message);
+      else {
+        toast.success("Producto guardado!");
+        // Resetear campos
         setFiles([]);
         setTitle("");
         setDescription("");
@@ -95,92 +97,106 @@ export default function UploadProduct() {
         setCategory("Madera");
       }
     } catch (err: any) {
-      console.error(err);
-      alert("Ocurrió un error inesperado: " + err.message);
+      toast.error("Error inesperado: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!user) {
+  if (!user)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4">
         <p className="text-2xl font-bold mb-6 text-amber-800 text-center">
-          Debes iniciar sesión para ver tu perfil.
+          Debes iniciar sesión
         </p>
         <button
-          type="button"
-          className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
           onClick={() => router.push("/login")}
+          className="bg-amber-700 text-white px-6 py-3 rounded-2xl shadow-md hover:bg-amber-800 transition"
         >
-          <FaEdit /> Iniciar Sesión
+          Iniciar Sesión
         </button>
       </div>
     );
-  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4 py-10">
-      <h1 className="text-4xl font-bold text-amber-700 mb-8 text-center">Agregar Nuevo Producto</h1>
+    <div className="min-h-screen flex flex-col items-center justify-start bg-stone-100 px-4 py-10">
+      <Toaster position="top-right" />
+      <h1 className="text-4xl font-bold text-amber-700 mb-8 text-center">
+        Agregar Nuevo Producto
+      </h1>
 
-      <form
+      <motion.form
         onSubmit={handleUpload}
-        className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 p-6 sm:p-8 w-full max-w-md flex flex-col gap-6"
+        className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-3xl flex flex-col gap-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
         {/* Imágenes */}
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Imágenes del producto</label>
+        <div className="flex flex-col gap-2">
+          <label className="font-semibold text-stone-700">Imágenes</label>
           <input
             type="file"
             accept="image/*"
             multiple
             onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
-            className="border border-stone-300 rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
           />
           {files.length > 0 && (
-            <ul className="mt-2 text-stone-600 list-disc list-inside">
-              {files.map((file, i) => (
-                <li key={i}>{file.name}</li>
+            <div className="flex gap-2 flex-wrap mt-2">
+              {files.map((f, i) => (
+                <motion.div
+                  key={i}
+                  className="bg-stone-200 text-stone-700 px-3 py-1 rounded-full text-sm flex items-center gap-2 shadow-sm"
+                  whileHover={{ scale: 1.05, backgroundColor: "#fbbf24" }}
+                >
+                  {f.name}
+                  <button
+                    type="button"
+                    onClick={() => setFiles(files.filter((_, index) => index !== i))}
+                    className="text-red-500 font-bold hover:text-red-700 transition"
+                  >
+                    ×
+                  </button>
+                </motion.div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
 
         {/* Título */}
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Título</label>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-stone-700">Título</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej: Mesa de Roble"
-            className="border border-stone-300 rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+            placeholder="Nombre del producto"
+            required
           />
         </div>
 
         {/* Descripción */}
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Descripción</label>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-stone-700">Descripción</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Ej: Mesa rústica trabajada en madera de roble."
-            rows={3}
-            className="border border-stone-300 rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none hover:border-amber-400 transition"
+            rows={4}
+            placeholder="Descripción del producto"
+            required
           />
         </div>
 
         {/* Categoría */}
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Categoría</label>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-stone-700">Categoría</label>
           <select
             value={category}
-            onChange={(e) =>
-              setCategory(
-                e.target.value as "Madera" | "Metal" | "Mixto" | "Cerámica" | "Vidrio" | "Otros"
-              )
-            }
-            className="border border-stone-300 rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            onChange={(e) => setCategory(e.target.value as any)}
+            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
           >
             <option value="Madera">Madera</option>
             <option value="Metal">Metal</option>
@@ -192,35 +208,39 @@ export default function UploadProduct() {
         </div>
 
         {/* Precio */}
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-stone-700">Precio</label>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-stone-700">Precio</label>
           <input
             type="text"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="Ej: $150.000"
-            className="border border-stone-300 rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
+            placeholder="Precio en CLP"
+            required
           />
         </div>
 
         {/* Botones */}
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="bg-stone-300 hover:bg-stone-400 text-stone-800 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg"
-          >
-            Volver
-          </button>
-          <button
+        <div className="flex flex-col md:flex-row gap-4 mt-4">
+          <motion.button
             type="submit"
             disabled={loading}
-            className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-3 rounded-2xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
+            className="flex-1 bg-amber-700 hover:bg-amber-800 text-white font-semibold px-6 py-3 rounded-2xl shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             {loading ? "Procesando..." : "Subir Producto"}
+          </motion.button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/profile")}
+            className="flex-1 bg-stone-700 hover:bg-stone-800 text-white font-semibold px-6 py-3 rounded-2xl shadow-md transition"
+          >
+            Volver a Perfil
           </button>
         </div>
-      </form>
+      </motion.form>
     </div>
   );
 }

@@ -163,74 +163,76 @@ export default function Perfil() {
 
   return (
     <main className="bg-stone-100 min-h-screen py-16 px-6 md:px-12">
-      {/* Header de usuario y acciones */}
-      <section className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 md:p-8 mb-10 flex flex-col md:flex-row justify-between items-center gap-6 transition">
-        {/* Botón Inicio */}
+
+        <div className="fixed top-4 left-4 z-50">
         <button
-          type="button"
-          className="flex items-center gap-2 bg-stone-300 hover:bg-stone-400 text-stone-800 px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
           onClick={() => router.push("/")}
+          className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold shadow-md transition"
         >
           <FaHome /> Inicio
         </button>
+      </div>
 
-        {/* Info de usuario */}
-        <div className="flex items-center gap-5 md:order-2">
-          <div className="p-3 rounded-full bg-amber-100">
-            <FaUser className="text-amber-700 text-3xl" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-stone-800">{user.email}</p>
-            <div className="flex flex-wrap gap-4 mt-2">
-              <span className="text-sm font-medium text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                Disponibles: {available.length}
-              </span>
-              <span className="text-sm font-medium text-rose-700 bg-rose-100 px-3 py-1 rounded-full">
-                No disponibles: {unavailable.length}
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* Acciones */}
-        <div className="flex gap-4 md:order-3">
-          <button
-            type="button"
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-            onClick={() => router.push("/upload")}
-          >
-            <FaPlus /> Añadir Producto
-          </button>
+      
+      {/* Header de usuario y estadísticas */}
+<section className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 md:p-8 mb-10 flex flex-col md:flex-row justify-between items-center gap-6 transition">
+  {/* Info de usuario */}
+  <div className="flex items-center gap-5">
+    <div className="p-3 rounded-full bg-amber-100">
+      <FaUser className="text-amber-700 text-3xl" />
+    </div>
+    <div>
+      <p className="text-xl font-bold text-stone-800">{user.email}</p>
+      <div className="flex flex-wrap gap-4 mt-2">
+        <span className="text-sm font-medium text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+          Disponibles: {available.length}
+        </span>
+        <span className="text-sm font-medium text-rose-700 bg-rose-100 px-3 py-1 rounded-full">
+          No disponibles: {unavailable.length}
+        </span>
+      </div>
+    </div>
+  </div>
 
-          <button
-            type="button"
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-            onClick={() => router.push("/dashboard")}
-          >
-            🗓 Dashboard
-          </button>
+  {/* Acciones */}
+  <div className="flex gap-4">
+    <button
+  type="button"
+  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
+  onClick={() => router.push("/dashboard")}
+>
+  🗓 Dashboard
+</button>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-2 bg-stone-700 hover:bg-stone-800 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
-          >
-            <FaSignOutAlt /> Cerrar Sesión
-          </button>
-        </div>
-      </section>
+    <button
+      type="button"
+      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
+      onClick={() => router.push("/upload")}
+    >
+      <FaPlus /> Añadir Producto
+    </button>
+    <button
+      type="button"
+      onClick={handleLogout}
+      className="flex items-center gap-2 bg-stone-700 hover:bg-stone-800 text-white px-5 py-2.5 rounded-full shadow-md font-medium transition-transform transform hover:scale-105"
+    >
+      <FaSignOutAlt /> Cerrar Sesión
+    </button>
+  </div>
+</section>
 
-      {/* Productos Disponibles */}
+
+      {/* Productos disponibles */}
       <section className="mb-16">
-        <h2 className="text-3xl font-bold text-amber-800 mb-10 text-center md:text-left">
+        <h2 className="text-3xl font-bold text-amber-800 mb-6 text-center md:text-left">
           Productos Disponibles
         </h2>
-
         {available.length === 0 ? (
           <p className="text-stone-600 text-center">No hay productos disponibles.</p>
         ) : (
           <motion.div
-            className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
             initial="hidden"
             animate="visible"
             variants={{
@@ -241,43 +243,36 @@ export default function Perfil() {
             {available.map((product) => (
               <motion.div
                 key={product.id}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden border border-stone-200 flex flex-col hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-2xl shadow-md overflow-hidden border border-stone-300 flex flex-col"
                 variants={cardVariants}
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.05 }}
               >
                 <ProductImage images={product.image_urls} />
-
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-stone-800">{product.title}</h3>
-                    <p className="mt-2 text-stone-600 line-clamp-3">{product.description}</p>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-amber-700 font-bold text-lg">${product.price}</span>
-                      <span className="text-xs font-medium bg-stone-100 text-stone-600 px-3 py-1 rounded-full">
-                        {product.category}
-                      </span>
-                    </div>
+                    <h3 className="text-xl font-semibold text-stone-800">{product.title}</h3>
+                    <p className="mt-2 text-stone-600">{product.description}</p>
+                    <p className="mt-2 font-bold text-amber-700 text-lg">${product.price}</p>
+                    <p className="mt-1 text-stone-500 font-medium">{product.category}</p>
                   </div>
-
-                  <div className="mt-6 flex flex-wrap gap-3">
+                  <div className="mt-4 flex gap-3 flex-wrap">
                     <button
                       type="button"
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-full font-medium transition-transform transform hover:scale-105"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-full font-semibold transition"
                       onClick={() => toggleStatus(product.id, product.status)}
                     >
                       Marcar no disponible
                     </button>
                     <button
                       type="button"
-                      className="flex items-center justify-center gap-2 flex-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-full font-medium transition-transform transform hover:scale-105"
+                      className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
                       onClick={() => router.push(`/modified/${product.id}`)}
                     >
                       <FaEdit /> Editar
                     </button>
                     <button
                       type="button"
-                      className="flex items-center justify-center gap-2 flex-1 bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-full font-medium transition-transform transform hover:scale-105"
+                      className="bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-full font-semibold transition flex items-center gap-2"
                       onClick={() => deleteProduct(product.id)}
                     >
                       <FaTrash /> Eliminar
@@ -290,7 +285,7 @@ export default function Perfil() {
         )}
       </section>
 
-      {/* Productos No Disponibles */}
+      {/* Productos no disponibles */}
       <section className="mb-16">
         <h2 className="text-2xl font-bold text-stone-600 mb-4 text-center md:text-left">
           Productos No Disponibles
