@@ -89,7 +89,6 @@ export default function UploadProduct() {
       if (error) toast.error("Error guardando producto: " + error.message);
       else {
         toast.success("Producto guardado!");
-        // Resetear campos
         setFiles([]);
         setTitle("");
         setDescription("");
@@ -135,13 +134,34 @@ export default function UploadProduct() {
         {/* Imágenes */}
         <div className="flex flex-col gap-2">
           <label className="font-semibold text-stone-700">Imágenes</label>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
-            className="border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-amber-400 transition"
-          />
+
+          <div className="flex gap-4 flex-wrap">
+            {/* Botón para cámara */}
+            <label className="bg-amber-700 text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-amber-800 transition">
+              Tomar Foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
+                className="hidden"
+              />
+            </label>
+
+            {/* Botón para examinar */}
+            <label className="bg-stone-700 text-white px-4 py-2 rounded-2xl cursor-pointer hover:bg-stone-800 transition">
+              Examinar Fotos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => e.target.files && setFiles(Array.from(e.target.files))}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {/* Previsualización */}
           {files.length > 0 && (
             <div className="flex gap-2 flex-wrap mt-2">
               {files.map((f, i) => (
