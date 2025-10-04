@@ -109,7 +109,7 @@ export default function UploadProduct() {
     <main className="min-h-screen flex flex-col items-center justify-start bg-stone-100 px-6 py-16">
       <Toaster position="top-right" />
       <h1 className="text-4xl font-bold text-amber-700 mb-10 text-center">
-        Agregar Nuevo Producto
+        Agregar Producto
       </h1>
 
       <motion.form
@@ -187,7 +187,7 @@ export default function UploadProduct() {
           >
             <option value="Madera">Madera</option>
             <option value="Metal">Metal</option>
-            <option value="Mixto">Mixto</option>
+            <option value="Madera+Metal">Mixto</option>
             <option value="Cerámica">Cerámica</option>
             <option value="Vidrio">Vidrio</option>
             <option value="Otros">Otros</option>

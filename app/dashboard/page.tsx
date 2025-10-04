@@ -66,7 +66,7 @@ export default function DashboardPro() {
       </button>
 
       <h1 className="text-4xl md:text-5xl font-extrabold text-amber-700 mb-12 text-center drop-shadow-md">
-        Dashboard de Ventas Pro
+        Registro Ventas
       </h1>
 
       {/* Selector de fechas */}
