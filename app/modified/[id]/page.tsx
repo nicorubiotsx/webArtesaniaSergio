@@ -11,7 +11,7 @@ type Product = {
   description: string;
   price: string;
   status: boolean;
-  image_url: string;
+  image_urls: string;
 };
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
@@ -99,7 +99,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         <div className="flex flex-col">
           <label className="mb-2 font-semibold text-stone-700">Imagen actual</label>
           <img
-            src={product.image_url}
+            src={product.image_urls[0]}
             alt={product.title}
             className="w-full h-48 object-cover rounded"
           />
